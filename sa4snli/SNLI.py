@@ -25,7 +25,7 @@ class SNLI:
         self.embedding_matrix = None
         self.c_parser.read(self.config)
 
-    def generateData(self, snli_pickle_fname=None):
+    def generate_data(self, snli_pickle_fname=None):
         train_data = self.c_parser.get('data_path', 'TRAIN_DATA')
         dev_data   = self.c_parser.get('data_path', 'DEV_DATA')
         test_data  = self.c_parser.get('data_path', 'TEST_DATA')
@@ -48,7 +48,7 @@ class SNLI:
 
 
 
-    def loadData(self, snli_pickle_fname=''):
+    def load_data(self, snli_pickle_fname=''):
         with open(snli_pickle_fname, mode='rb') as f:
             snli = pickle.load(f)
         return snli
