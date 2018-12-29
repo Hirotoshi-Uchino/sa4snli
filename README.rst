@@ -1,6 +1,6 @@
 example of config.ini file
 ======================
-Define data paths to use::
+Define data paths to use in a config.ini file::
 
    [data_path]
    BASE_DIR=../NLP
@@ -13,7 +13,7 @@ Define data paths to use::
 
 usage of SNLI class
 ======================
-.. You can generate the data for input as follows. Once saving the generated data, you can quickly load the data:: 
+You can generate the data for input as follows. Once saving the generated data, you can quickly load the data:: 
 
    from SNLI import SNLI
    snli = SNLI()
