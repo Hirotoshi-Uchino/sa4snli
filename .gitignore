@@ -1,1 +1,7 @@
 config.ini
+
+memos/
+
+.idea/
+
+__pycache__/
