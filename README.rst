@@ -1,6 +1,7 @@
 example of config.ini file
 ======================
-::
+Define data paths to use::
+
    [data_path]
    BASE_DIR=../NLP
    WORD_EMBED=%(BASE_DIR)s/word_embed/glove.6B.300d.txt
@@ -12,7 +13,8 @@ example of config.ini file
 
 usage of SNLI class
 ======================
-.. code-block:: python
+.. You can generate the data for input as follows. Once saving the generated data, you can quickly load the data:: 
+
    from SNLI import SNLI
    snli = SNLI()
 
