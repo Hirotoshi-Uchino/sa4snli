@@ -1,11 +1,12 @@
-
-
 from SNLI import SNLI
+from layers.MyDense import MyDense
 
 from keras.models import Model
 from keras.layers import Input, Dense, Embedding, Flatten, Dropout
 from keras.layers.advanced_activations import PReLU
 from keras.layers.normalization import BatchNormalization
+
+
 
 snli = SNLI()
 # load data
@@ -25,22 +26,26 @@ x     = Embedding(input_dim=num_words, output_dim=embedding_dim,
                   weights=[snli.embedding_matrix], trainable=True)(input)
 x     = Flatten()(x)
 
-x     = Dense(dim)(x)
+#x     = Dense(dim)(x)
+x     = MyDense(dim)(x)
 x     = PReLU()(x)
 x     = BatchNormalization()(x)
 x     = Dropout(keep_prob)(x)
 
-x     = Dense(dim)(x)
+#x     = Dense(dim)(x)
+x     = MyDense(dim)(x)
 x     = PReLU()(x)
 x     = BatchNormalization()(x)
 x     = Dropout(keep_prob)(x)
 
-x     = Dense(dim)(x)
+#x     = Dense(dim)(x)
+x     = MyDense(dim)(x)
 x     = PReLU()(x)
 x     = BatchNormalization()(x)
 #x     = Dropout(keep_prob)(x)
 
-out   = Dense(class_dim, activation='sigmoid')(x)
+#out   = Dense(class_dim, activation='softmax')(x)
+out   = MyDense(class_dim, activation='softmax')(x)
 
 model = Model(inputs=input, outputs=out)
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
