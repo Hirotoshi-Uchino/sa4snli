@@ -4,4 +4,6 @@ memos/
 data/
 .idea/
 
+*playground/
+
 __pycache__/
