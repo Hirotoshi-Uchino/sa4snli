@@ -3,7 +3,7 @@ config.ini
 memos/
 data/
 .idea/
-
+model/
 *playground/
 
 __pycache__/

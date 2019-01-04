@@ -20,5 +20,18 @@ def create_embedding_matrix(embedding_path, word_index, embedding_dim=300, outpu
             embedding_matrix[i] = embedding_vector
 
     return embedding_matrix
-    # save word_index
-    # np.save(output_file_name, embedding_matrix)
+
+def create_positional_encoding(length, dim_model, wlength = 10000.):
+    assert(dim_model % 2 == 0)
+    position = np.broadcast_to(np.arange(length)[:, None], (length, dim_model // 2))
+    unit     = np.broadcast_to(np.arange(dim_model // 2)[None, :], (length, dim_model // 2))
+    rad = position / (wlength *1.) ** (unit / (dim_model // 2))
+
+    sin = np.sin(rad)
+    cos = np.cos(rad)
+
+    con = []
+    for i in range(sin.shape[0]):
+        con.append(np.concatenate([sin[i], cos[i]]))
+
+    return np.array(con)

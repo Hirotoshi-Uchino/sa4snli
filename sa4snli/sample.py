@@ -1,8 +1,8 @@
 from SNLI import SNLI
-from layers.MyDense import MyDense
+from playground.MyDense import MyDense
 
 from keras.models import Model
-from keras.layers import Input, Dense, Embedding, Flatten, Dropout
+from keras.layers import Input, Embedding, Flatten, Dropout
 from keras.layers.advanced_activations import PReLU
 from keras.layers.normalization import BatchNormalization
 

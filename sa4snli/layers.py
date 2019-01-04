@@ -13,23 +13,24 @@ class MHSA(Layer):
         self.wq_kernels = []
         self.wk_kernels = []
         self.wv_kernels = []
+        assert(input_shape[2] % self.heads == 0)
         head_dim = int(input_shape[2] / self.heads)
 
         for i in range(self.heads):
-            self.wq_kernels.append(self.add_weight(name='kernel',
+            self.wq_kernels.append(self.add_weight(name='wq_kernel',
                                       shape=(input_shape[2], head_dim),
                                       initializer='glorot_uniform',
                                       trainable=True))
-            self.wk_kernels.append(self.add_weight(name='kernel',
+            self.wk_kernels.append(self.add_weight(name='wk_kernel',
                                       shape=(input_shape[2], head_dim),
                                       initializer='glorot_uniform',
                                       trainable=True))
-            self.wv_kernels.append(self.add_weight(name='kernel',
+            self.wv_kernels.append(self.add_weight(name='wv_kernel',
                                       shape=(input_shape[2], head_dim),
                                       initializer='glorot_uniform',
                                       trainable=True))
 
-        self.wo_kernel = self.add_weight(name='kernel',
+        self.wo_kernel = self.add_weight(name='wo_kernel',
                                       shape=(input_shape[2], input_shape[2]),
                                       initializer='glorot_uniform',
                                       trainable=True)
@@ -63,6 +64,13 @@ class MHSA(Layer):
 
         return attentions
 
+
+    def get_config(self):
+        config = {'heads': self.heads, 'use_softmax': self.use_softmax}
+        base_config = super(MHSA, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))
+
+
 # Position-wise Feed-Forward Networks
 class PFNN(Layer):
 
@@ -84,7 +92,7 @@ class PFNN(Layer):
                                       initializer='zeros', trainable=True)
         self.bias_2   = self.add_weight(name='bias', shape=(1, input_shape[2]),
                                         initializer='zeros', trainable=True)
-        super(PFNN, self).build(input_shape)  # Be sure to call this somewhere!
+        super(PFNN, self).build(input_shape)
 
     def call(self, x):
         hidden = K.dot(x, self.kernel_1) + self.bias_1
@@ -95,3 +103,8 @@ class PFNN(Layer):
 
     def compute_output_shape(self, input_shape):
         return (input_shape)
+
+    def get_config(self):
+        config = {'ff_dim': self.ff_dim}
+        base_config = super(PFNN, self).get_config()
+        return dict(list(base_config.items()) + list(config.items()))

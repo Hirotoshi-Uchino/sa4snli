@@ -1,6 +1,7 @@
 import configparser
 import pickle
 import pandas as pd
+import numpy as np
 
 from keras.utils import np_utils
 from keras.preprocessing.text import Tokenizer
@@ -12,15 +13,17 @@ class SNLI:
 
     c_parser = configparser.SafeConfigParser()
 
-    def __init__(self, config='config.ini'):
-        self.config = config
-        self.x_train = None
-        self.x_dev   = None
-        self.x_test  = None
-        self.y_train = None
-        self.y_dev   = None
-        self.y_test  = None
-        self.maxlen  = None
+    def __init__(self, padding='post', config='config.ini'):
+        self.padding   = padding
+        self.config    = config
+        self.x_train   = None
+        self.x_dev     = None
+        self.x_test    = None
+        self.y_train   = None
+        self.y_dev     = None
+        self.y_test    = None
+        self.s1_maxlen = None
+        self.s2_maxlen = None
         self.tokenizer = Tokenizer()
         self.embedding_matrix = None
         self.c_parser.read(self.config)
@@ -35,7 +38,7 @@ class SNLI:
         dev_df   = pd.read_csv(dev_data, sep="\t", header=0)
         test_df  = pd.read_csv(test_data, sep="\t", header=0)
 
-        self.preprocessing(train_df, dev_df, test_df)
+        self.preprocessing_pad_concat(train_df, dev_df, test_df)
 
         embedding_path = self.c_parser.get('data_path', 'WORD_EMBED')
         self.embedding_matrix = create_embedding_matrix(embedding_path,
@@ -52,7 +55,6 @@ class SNLI:
         with open(snli_pickle_fname, mode='rb') as f:
             snli = pickle.load(f)
         return snli
-
 
     def preprocessing(self, train_df, dev_df, test_df):
         train_df = train_df[train_df["gold_label"] != "-"].fillna("")
@@ -93,6 +95,90 @@ class SNLI:
         self.y_test  = np_utils.to_categorical(y_test, 3)
 
         self.tokenizer = tokenizer
+
+    def preprocessing_pad_concat(self, train_df, dev_df, test_df):
+        train_df = train_df[train_df["gold_label"] != "-"].fillna("")
+        dev_df   = dev_df[dev_df["gold_label"] != "-"].fillna("")
+        test_df  = test_df[test_df["gold_label"] != "-"].fillna("")
+        sep      = '|'
+        self._search_snli_maxlen(train_df, dev_df, test_df)
+
+        tokenizer = Tokenizer(filters='!"#$%&()*+,-./:;<=>?@[\\]^_`{~}\t\n')
+
+        tokenizer.fit_on_texts(train_df["sentence1"])
+        tokenizer.fit_on_texts(train_df["sentence2"])
+        tokenizer.fit_on_texts(dev_df["sentence1"])
+        tokenizer.fit_on_texts(dev_df["sentence2"])
+        tokenizer.fit_on_texts(test_df["sentence1"])
+        tokenizer.fit_on_texts(test_df["sentence2"])
+        tokenizer.fit_on_texts(sep)
+
+        seq_train1 = tokenizer.texts_to_sequences(train_df["sentence1"])
+        seq_train2 = tokenizer.texts_to_sequences(train_df["sentence2"])
+        seq_dev1   = tokenizer.texts_to_sequences(dev_df["sentence1"])
+        seq_dev2   = tokenizer.texts_to_sequences(dev_df["sentence2"])
+        seq_test1  = tokenizer.texts_to_sequences(test_df["sentence1"])
+        seq_test2  = tokenizer.texts_to_sequences(test_df["sentence2"])
+        seq_sep    = tokenizer.texts_to_sequences(sep)
+
+        seq_sep    = sequence.pad_sequences(seq_sep)
+
+        x_train1  = sequence.pad_sequences(seq_train1, maxlen=self.s1_maxlen, padding=self.padding)
+        x_train2  = sequence.pad_sequences(seq_train2, maxlen=self.s2_maxlen, padding=self.padding)
+        seq_sep_b = np.broadcast_to(seq_sep, shape=(x_train1.shape[0], 1))
+        self.x_train = np.concatenate([x_train1, seq_sep_b, x_train2], axis=1)
+
+        x_dev1 = sequence.pad_sequences(seq_dev1, maxlen=self.s1_maxlen, padding=self.padding)
+        x_dev2 = sequence.pad_sequences(seq_dev2, maxlen=self.s2_maxlen, padding=self.padding)
+        seq_sep_b = np.broadcast_to(seq_sep, shape=(x_dev1.shape[0], 1))
+        self.x_dev   = np.concatenate([x_dev1, seq_sep_b, x_dev2], axis=1)
+
+        x_test1 = sequence.pad_sequences(seq_test1, maxlen=self.s1_maxlen, padding=self.padding)
+        x_test2 = sequence.pad_sequences(seq_test2, maxlen=self.s2_maxlen, padding=self.padding)
+        seq_sep_b = np.broadcast_to(seq_sep, shape=(x_test1.shape[0], 1))
+        self.x_test  = np.concatenate([x_test1, seq_sep_b, x_test2], axis=1)
+
+        y_label = {"contradiction": 0, "entailment": 1, "neutral": 2}
+
+        y_train      = [y_label[i] for i in train_df["gold_label"]]
+        self.y_train = np_utils.to_categorical(y_train, 3)
+        y_dev        = [y_label[i] for i in dev_df["gold_label"]]
+        self.y_dev   = np_utils.to_categorical(y_dev, 3)
+        y_test       = [y_label[i] for i in test_df["gold_label"]]
+        self.y_test  = np_utils.to_categorical(y_test, 3)
+
+        self.tokenizer = tokenizer
+
+    def _search_snli_maxlen(self, train_df, dev_df, test_df):
+        s1_train = train_df['sentence1']
+        s2_train = train_df['sentence2']
+
+        s1_dev = dev_df['sentence1']
+        s2_dev = dev_df['sentence2']
+
+        s1_test = test_df['sentence1']
+        s2_test = test_df['sentence2']
+
+        def search_maxlen_local(s_train, s_dev, s_test):
+            maxlen = 0
+            for s in [s_train, s_dev, s_test]:
+                _maxlen = self._search_maxlen(s)
+                if(_maxlen > maxlen):
+                    maxlen = _maxlen
+            return maxlen
+
+        self.s1_maxlen = search_maxlen_local(s1_train, s1_dev, s1_test)
+        self.s2_maxlen = search_maxlen_local(s2_train, s2_dev, s2_test)
+
+
+
+    def _search_maxlen(self, sentences):
+        maxlen = 0
+        for sentence in sentences:
+            sp_sentence = sentence.split()
+            if len(sp_sentence) > maxlen:
+                maxlen = len(sp_sentence)
+        return maxlen
 
     # def preprocessing(self, train_df, dev_df, test_df):
     #     train_df = train_df[train_df["gold_label"] != "-"].fillna("")
